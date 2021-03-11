@@ -1,9 +1,8 @@
 package com.example.qq;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
@@ -21,226 +20,204 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
-import com.example.qq.Service.ChatService;
-import com.example.qq.Service.FragmentListener;
-import com.example.qq.adapter.ContactsPageListAdapter;
 import com.jakewharton.rxbinding2.view.RxView;
 
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+
 import io.reactivex.Observable;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
+import com.example.qq.Service.ChatService;
+import com.example.qq.Service.FragmentListener;
+import com.example.qq.adapter.ContactsPageListAdapter;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link LoginFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class LoginFragment extends Fragment {
-    private PopupWindow popupDialog;
-    private ConstraintLayout layoutContext;//正常内容部分
-    private LinearLayout layoutHistory;//历史菜单部分
-    private EditText editTextQQNum;
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+    private ConstraintLayout layoutContext;//正常内容部分，是一个ConstraintLayout
+    private LinearLayout layoutHistory;//历史菜单部分，是一个LinearLayout
+    private EditText editTextQQNum;//QQ号输个框
+    private PopupWindow popupDialog;//用于显示进度条
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    private FragmentListener fragmentListener;
 
     public LoginFragment() {
         // Required empty public constructor
     }
 
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
+        View v = inflater.inflate(R.layout.fragment_login, container, false);
 
-    private FragmentListener fragmentListener;
+        layoutContext = v.findViewById(R.id.layoutContext);
+        layoutHistory = v.findViewById(R.id.layoutHistory);
+        editTextQQNum = v.findViewById(R.id.editTextQQNum);
+
+        //响应下拉箭头的点击事件，弹出登录历史记录菜单
+        v.findViewById(R.id.textViewHistory).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                layoutContext.setVisibility(View.INVISIBLE);
+                layoutHistory.setVisibility(View.VISIBLE);
+
+                //创建两条历史记录菜单项，添加到layoutHistory中
+                for(int i=0;i<3;i++) {
+                    View layoutItem = getActivity().getLayoutInflater().inflate(R.layout.login_history_item, null);
+                    //响应菜单项的点击，把它里面的信息填到输入框中。
+                    layoutItem.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            editTextQQNum.setText("617540836");
+                            layoutContext.setVisibility(View.VISIBLE);
+                            layoutHistory.setVisibility(View.INVISIBLE);
+                        }
+                    });
+                    layoutHistory.addView(layoutItem);
+                }
+
+                //使用动画显示历史记录
+                AnimationSet set = (AnimationSet) AnimationUtils.loadAnimation(
+                        getContext(), R.anim.login_history_anim);
+                layoutHistory.startAnimation(set);
+            }
+        });
+
+        //当点击菜单项之外的区域时，把历史菜单隐藏
+        v.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(layoutHistory.getVisibility()==View.VISIBLE){
+                    layoutContext.setVisibility(View.VISIBLE);
+                    layoutHistory.setVisibility(View.INVISIBLE);
+                }
+            }
+        });
+
+        //响应登录按钮的点击事件
+        View buttonLogin = v.findViewById(R.id.buttonLogin);
+        RxView.clicks(buttonLogin)
+                .throttleFirst(10 , TimeUnit.SECONDS)
+                .subscribe(obj -> {
+
+            //切换页面之前要先判断是否登录成功
+            //取出用户名，向服务端发出登录请求。
+            String username = editTextQQNum.getText().toString();
+            //Retrofit跟据接口实现类并创建实例，这使用了动态代理技术，
+            ChatService service = fragmentListener.getRetrofit().create(ChatService.class);
+            Observable<ServerResult<ContactsPageListAdapter.ContactInfo>> observable =
+                    service.requestLogin(username,null);
+            observable.map(result -> {
+                //判断服务端是否正确返回
+                if(result.getRetCode()==0) {
+                    //服务端无错误，处理返回的数据
+                    return result.getData();
+                }else{
+                    //服务端出错了，抛出异常，在Observer中捕获之
+                    throw new RuntimeException(result.getErrMsg());
+                }
+            }).subscribeOn(Schedulers.computation())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .doFinally(() -> hideProgressBar())
+                    .subscribe(new Observer<ContactsPageListAdapter.ContactInfo>(){
+                        @Override
+                        public void onSubscribe(Disposable d) {
+                            //准备好进度条
+                            showProgressBar();
+                        }
+
+                        @Override
+                        public void onNext(ContactsPageListAdapter.ContactInfo contactInfo) {
+                            //保存下我的信息
+                            MainActivity.myInfo=contactInfo;
+
+                            //无错误时执行,登录成功，进入主页面
+                            FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
+                            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+                            MainFragment fragment = new MainFragment();
+                            //替换掉FrameLayout中现有的Fragment
+                            fragmentTransaction.replace(R.id.fragment_container, fragment);
+                            //将这次切换放入后退栈中，这样可以在点后退键时自动返回上一个页面
+                            fragmentTransaction.addToBackStack("login");
+                            fragmentTransaction.commit();
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                            //在这里捕获各种异常，提示错误信息
+                            String errmsg = e.getLocalizedMessage();
+                            Snackbar.make(layoutContext, "大王祸事了："+errmsg, Snackbar.LENGTH_LONG)
+                                    .setAction("Action", null).show();
+                            Log.e("qqserver",e.getLocalizedMessage());
+                            //弹出Server地址设置对话框
+                            fragmentListener.showServerAddressSetDlg();
+                        }
+
+                        @Override
+                        public void onComplete() {
+
+                        }
+                    });
+        });
+
+        v.findViewById(R.id.textViewRegister).setOnClickListener(v1 -> {
+            //启动注册Activity
+            Intent intent = new Intent(getContext(),RegisterActivity.class);
+            startActivity(intent);
+        });
+
+
+        return v;
+    }
+
+    //显示进度条
+    private void showProgressBar(){
+        //显示一个PopWindow，在这个Window中显示进度条
+        //进度条
+        ProgressBar progressBar = new ProgressBar(getContext());
+        //设置进度条窗口覆盖整个父控件的范围，这样可以防止用户多次
+        //点击按钮
+        popupDialog = new PopupWindow(progressBar,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT);
+        //将当前主窗口变成40%半透明，以实现背景变暗效果
+        WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
+        lp.alpha = 0.4f;
+        getActivity().getWindow().setAttributes(lp);
+        //显示进度条窗口
+        popupDialog.showAtLocation(layoutContext, Gravity.CENTER, 0, 0);
+    }
+
+    //隐藏进度条
+    private void hideProgressBar(){
+        popupDialog.dismiss();
+        WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
+        lp.alpha = 1f;
+        getActivity().getWindow().setAttributes(lp);
+    }
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
         if(context instanceof FragmentListener){
-            fragmentListener=(FragmentListener)context;
+            fragmentListener = (FragmentListener) context;
         }
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
-        fragmentListener=null;
-    }
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment LoginFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static LoginFragment newInstance(String param1, String param2) {
-        LoginFragment fragment = new LoginFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
+        fragmentListener = null;
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
+    public void onResume() {
+        super.onResume();
+        if(MainActivity.myInfo!=null) {
+            editTextQQNum.setText(MainActivity.myInfo.getName());
         }
-    }
-
-    @SuppressLint("CheckResult")
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        View v=inflater.inflate(R.layout.fragment_login,container,false);
-        layoutContext=v.findViewById(R.id.layoutContext);
-        layoutHistory=v.findViewById(R.id.layoutHistory);
-        editTextQQNum = v.findViewById(R.id.editTextQQNum);
-        v.findViewById(R.id.textViewHistory).setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View view){
-              layoutContext.setVisibility(View.INVISIBLE);
-              layoutHistory.setVisibility(View.VISIBLE);
-              //创建三条菜单项，添加到layoutHistory中
-                @SuppressLint("InflateParams")
-                View layoutItem= Objects.requireNonNull(getActivity()).getLayoutInflater().inflate(R.layout.login_history_item,null);
-                layoutHistory.addView(layoutItem);
-                layoutItem= Objects.requireNonNull(getActivity()).getLayoutInflater().inflate(R.layout.login_history_item,null);
-                layoutHistory.addView(layoutItem);
-                layoutItem= Objects.requireNonNull(getActivity()).getLayoutInflater().inflate(R.layout.login_history_item,null);
-                layoutHistory.addView(layoutItem);
-                //响应菜单项的点击，把它里面的信息填到输入框中。
-                layoutItem.setOnClickListener(new View.OnClickListener(){
-                    @Override
-                    public void onClick(View v) {
-                        editTextQQNum.setText("123384328943894893");
-                        layoutContext.setVisibility(View.VISIBLE);
-                        layoutHistory.setVisibility(View.INVISIBLE);
-                    }
-                });
-                //使用动画显示历史记录
-                AnimationSet set=(AnimationSet) AnimationUtils.loadAnimation(
-                        getContext(),R.anim.login_history_anim);
-                layoutHistory.startAnimation(set);
-            }
-                                                                }
-
-        );
-        //当点击菜单以外的区域时，把历史菜单隐藏
-        v.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (layoutHistory.getVisibility()==View.VISIBLE) {
-                    layoutContext.setVisibility(View.VISIBLE);
-                    layoutHistory.setVisibility(View.INVISIBLE);
-                }
-            }
-        });
-        //响应登陆按钮的点击事件
-        View buttonLogin = v.findViewById(R.id.buttonLogin);
-        RxView.clicks(buttonLogin)
-              .throttleFirst(10, TimeUnit.SECONDS)//防止按钮重复点击
-              .subscribe(obj->{
-            //切换页面需要判断是否登录成功
-            //取出用户名，向服务端发出登录请求
-            String username = editTextQQNum.getText().toString();
-            //Retrofit创建实例并根据接口使用动态代理技术
-            ChatService service =
-                    fragmentListener.getRetrofit().create(ChatService.class);
-            Observable<ServerResult<ContactsPageListAdapter.ContactInfo>> observable =
-                    service.requestLogin(username,null);
-            observable.map(result->{
-                //判断服务器是否正确返回
-                if(result.getRetCode()==0){
-                    return result.getData();
-                }else{
-                    //服务器出错
-                    throw new RuntimeException(result.getErrMsg());
-                }
-            })
-            .subscribeOn(Schedulers.computation())
-            .observeOn(AndroidSchedulers.mainThread())
-            .doFinally(()->hideProgressBar())
-            .subscribe(new Observer<ContactsPageListAdapter.ContactInfo>(){
-
-                @Override
-                public void onSubscribe(@NonNull Disposable d) {
-                    //准备好进度条
-                    showProgressBar();
-                }
-
-                @Override
-                public void onNext(@NonNull ContactsPageListAdapter.ContactInfo contactInfo) {
-                    //保存我的信息
-                    MainActivity.myInfo= contactInfo;
-                    //无错误，进入主页面
-                    FragmentManager fragmentManager = Objects.requireNonNull(getActivity()).getSupportFragmentManager();
-                    FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-                    MainFragment fragment = new MainFragment();
-                    //替换掉FrameLayout也就是主活动中的布局里的登录碎片
-                    fragmentTransaction.replace(R.id.fragment_container,fragment);
-                    fragmentTransaction.addToBackStack("login");
-                    fragmentTransaction.commit();
-                }
-
-                @Override
-                public void onError(@NonNull Throwable e) {
-                    //无错误，进入主页面
-                    FragmentManager fragmentManager = Objects.requireNonNull(getActivity()).getSupportFragmentManager();
-                    FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-                    MainFragment fragment = new MainFragment();
-                    //替换掉FrameLayout也就是主活动中的布局里的登录碎片
-                    fragmentTransaction.replace(R.id.fragment_container,fragment);
-                    fragmentTransaction.addToBackStack("login");
-                    fragmentTransaction.commit();
-                }
-
-                @Override
-                public void onComplete() {
-
-                }
-            });
-        });
-
-        return v;
-    }
-
-    //显示进度条的代码
-    private void showProgressBar(){
-        //在PopWindow上显示进度条
-        //进度条
-        ProgressBar progressBar = new ProgressBar(getContext());
-        //设置窗口覆盖父控件的范围 防止用户多次点击登录按钮
-       popupDialog = new PopupWindow(progressBar, ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT);
-        WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
-        lp.alpha=0.4f;
-        getActivity().getWindow().setAttributes(lp);
-        //显示进度条窗口
-        popupDialog.showAtLocation(layoutContext, Gravity.CENTER,0,0);
-    }
-
-    //隐藏进度条代码
-    private void hideProgressBar(){
-        popupDialog.dismiss();
-        WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
-        lp.alpha=1f;
-        getActivity().getWindow().setAttributes(lp);
-
     }
 }

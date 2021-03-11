@@ -1,15 +1,15 @@
 package com.example.qq;
 
 public class ServerResult<T> {
-    //等于0表示无错误。无错时errMsg没有值
+    //等于0时表示无错误，其余值表示有错误，错误时，errMsg有值，否则无值
     private int retCode;
     //出错时的信息
     private String errMsg;
-    //返回的数据，由T决定
-    private  T data;
+    //真正返回的数据，其类型由参数T决定
+    private T data;
 
-    public ServerResult(int retCode){
-        this.retCode=retCode;
+    public ServerResult(int retCode) {
+        this.retCode = retCode;
     }
 
     public ServerResult(int retCode, String errMsg) {
@@ -46,5 +46,4 @@ public class ServerResult<T> {
     public void setData(T data) {
         this.data = data;
     }
-
 }

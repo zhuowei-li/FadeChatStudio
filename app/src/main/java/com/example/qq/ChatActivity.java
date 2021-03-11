@@ -1,17 +1,12 @@
 package com.example.qq;
 
-import android.annotation.SuppressLint;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.PersistableBundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,12 +14,9 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.example.qq.Service.ChatService;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
@@ -33,234 +25,209 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
+import com.example.qq.Service.ChatService;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ChatActivity extends AppCompatActivity {
 
-    //为网络想通信做准备
+    //存放所有的聊天消息
+    private List<Message> chatMessages = new ArrayList<>();
+
+    //用于网络通讯
     private Retrofit retrofit;
     private ChatService chatService;
     private Disposable uploadDisposable;//用于上传时取消请求
     private Disposable downloadDisposable;//用于下载时取消请求
 
-    //存放消息的类
-    public class Message {
-        private String contactName;//发出人的名字
-        private Long time;
-        private String content;
-
-        //构造方法
-        public Message(String contactName, Long time, String content) {
-            this.contactName = contactName;
-            this.time = time;
-            this.content = content;
-        }
-
-        public String getContactName() {
-            return contactName;
-        }
-
-        public void setContactName(String contactName) {
-            this.contactName = contactName;
-        }
-
-        public Long getTime() {
-            return time;
-        }
-
-        public void setTime(Long time) {
-            this.time = time;
-        }
-
-        public String getContent() {
-            return content;
-        }
-
-        public void setContent(String content) {
-            this.content = content;
-        }
-    }
-
-    private List<Message> chatMessages = new ArrayList<>();
-
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    @SuppressLint("CheckResult")
     @Override
-    protected void onCreate(@Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //设置Layout
         setContentView(R.layout.activity_chat);
-
-        //创建Retrofit对象
-        retrofit = new Retrofit.Builder()
-                .baseUrl("http://10.0.2.2:8080/")
-                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        chatService = retrofit.create(ChatService.class);
-
         //设置动作栏
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
 
+        //获取启动此Activity时传过来的数据
+        //在启动聊天界面时，通过此方式把对方的名字传过来
         String contactName = getIntent().getStringExtra("contact_name");
         if (contactName != null) {
             toolbar.setTitle(contactName);
         }
 
         setSupportActionBar(toolbar);
-        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
+        //设置显示动作栏上的返回图标
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        RecyclerView recyclerView = findViewById(R.id.chatMessageListView);
+        //获取Recycler控件并设置适配器
+        final RecyclerView recyclerView = findViewById(R.id.chatMessageListView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setAdapter(new chatMessagesAdapter());
-
-        //每隔两秒向服务器获取一下新的聊天记录
-        Observable.interval(2, TimeUnit.SECONDS).flatMap(v -> {
-            //创建获取聊天信息的Observer
-            //请求聊天数据的参数是下一段Message的起始Index
-            return chatService.getMessageFromIndex(chatMessages.size())
-                    .map(result -> {
-                        //判断服务器是否正确返回
-                        if (result.getRetCode() == 0) {
-                            return result.getData();
-                        } else {
-                            throw new RuntimeException(result.getErrMsg());
-                        }
-                    });
-        }).retry()
-                .subscribeOn(Schedulers.computation())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<List<Message>>() {
-
-                               @Override
-                               public void accept(List<Message> messages) throws Exception {
-                                   chatMessages.addAll(messages);
-                                   //在view中显示，通知RecyclerView更新一行
-                                   recyclerView.getAdapter().notifyItemRangeInserted
-                                           (chatMessages.size(), chatMessages.size());
-                                   //滚动显示最新消息
-                                   recyclerView.scrollToPosition(chatMessages.size() - 1);
-                               }
-                           }, new Consumer<Throwable>() {
-
-                               @Override
-                               public void accept(Throwable throwable) {
-
-                               }
-                           }, new Action() {
-
-                               @Override
-                               public void run() throws Exception {
-
-                               }
-                           }, new Consumer<Disposable>() {
-
-                               @Override
-                               public void accept(Disposable disposable) {
-                                   downloadDisposable = disposable;
-                               }
-                           }
-
-                );
+        recyclerView.setAdapter(new ChatMessagesAdapter());
 
         //响应按钮的点击，发出消息
         findViewById(R.id.buttonSend).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //拿到输入框中的消息
+                //现在还不能真正发出消息，把消息放在chatMessages中，显示出来即可
+                //从EditText控件取得消息
                 EditText editText = findViewById(R.id.editMessage);
                 String msg = editText.getText().toString();
 
-                //创建消息，准备上传
+                //创建消息对象，准备上传
                 Message chatMessage = new Message(MainActivity.myInfo.getName(),
                         new Date().getTime(), msg);
 
                 //上传到服务端
                 Observable<ServerResult> observable = chatService.uploadMessage(chatMessage);
                 observable.retry().map(result -> {
-                    //判断服务器是否正确返回
+                    //判断服务端是否正确返回
                     if (result.getRetCode() == 0) {
+                        //服务端无错误，随便返回点东西吧，反正也不用处理
                         return 0;
                     } else {
-                        //抛出异常
+                        //服务端出错了，抛出异常，在Observer中捕获之
                         throw new RuntimeException(result.getErrMsg());
                     }
                 }).subscribeOn(Schedulers.computation())
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(new Consumer<Object>() {
+                        .subscribe(new Consumer<Object>() {//onNext()
                             @Override
-                            public void accept(Object o) throws Exception {
-                                //对应onNext,不做操作
+                            public void accept(Object data) throws Exception {
+                                //对应onNext()，但是什么也不需要做
                             }
-                        }, new Consumer<Throwable>() {
-
+                        }, new Consumer<Throwable>() {//onError()
                             @Override
-                            public void accept(Throwable throwable) {
-                                //对应onError
-                                String errmsg = throwable.getLocalizedMessage();
-                                Snackbar.make(view, "失败：" + errmsg, Snackbar.LENGTH_LONG)
+                            public void accept(Throwable e) throws Exception {
+                                //对应onError()，向用户提示错误
+                                String errmsg = e.getLocalizedMessage();
+                                Snackbar.make(view, "大王祸事了：" + errmsg, Snackbar.LENGTH_LONG)
                                         .setAction("Action", null).show();
                             }
-                        }, new Action() {
+                        }, new Action() { //onComplete()
                             @Override
                             public void run() throws Exception {
 
                             }
-                            //onComplete
-                        }, new Consumer<Disposable>() {
+                        }, new Consumer<Disposable>() { //onSubcribe()
                             @Override
-                            public void accept(Disposable disposable) {
+                            public void accept(Disposable disposable) throws Exception {
+                                //保存下disposable以取消订阅
                                 uploadDisposable = disposable;
                             }
                         });
-                //上传消息完毕，再显示消息
+
+                //添加到集合中，从而能在RecyclerView中显示
                 chatMessages.add(chatMessage);
-                //在view中显示出来
-                Objects.requireNonNull(recyclerView.getAdapter()).notifyItemInserted(chatMessages.size() - 1);
-                //向下滚动，显示新消息
+                //在view中显示出来。通知RecyclerView，更新一行
+                recyclerView.getAdapter().notifyItemInserted(chatMessages.size() - 1);
+                //让RecyclerView向下滚动，以显示最新的消息
                 recyclerView.scrollToPosition(chatMessages.size() - 1);
             }
         });
 
+        //创建Retrofit对象
+        retrofit = new Retrofit.Builder()
+                .baseUrl(MainActivity.serverHostURL)
+                //本来接口方法返回的是Call，由于现在返回类型变成了Observable，
+                //所以必须设置Call适配器将Observable与Call结合起来
+                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+                //Json数据自动转换
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        chatService = retrofit.create(ChatService.class);
+
+        //每隔2秒向服务端获取一下新的聊天消息
+        Observable.interval(2, TimeUnit.SECONDS).flatMap(v -> {
+
+            //创建获取聊天消息的Observable
+            //参数是下一坨Message的起始Index
+            return chatService.getMessagesFromIndex(chatMessages.size())
+                    .map(result -> {
+                        //判断服务端是否正确返回
+                        if (result.getRetCode() == 0) {
+                            //服务端无错误，随便返回点东西吧，反正也不用处理
+                            return result.getData();
+                        } else {
+                            //服务端出错了，抛出异常，在Observer中捕获之
+                            throw new RuntimeException(result.getErrMsg());
+                        }
+                    });
+
+        }).retry()
+                .subscribeOn(Schedulers.computation())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<List<Message>>() {//onNext()
+                    @Override
+                    public void accept(List<Message> messages) throws Exception {
+                        //将消息显示在RecyclerView中
+                        chatMessages.addAll(messages);
+                        //在view中显示出来。通知RecyclerView，更新一行
+                        recyclerView.getAdapter().notifyItemRangeInserted(
+                                chatMessages.size(),chatMessages.size());
+                        //让RecyclerView向下滚动，以显示最新的消息
+                        recyclerView.scrollToPosition(chatMessages.size() - 1);
+                    }
+                }, new Consumer<Throwable>() {//onError()
+                    @Override
+                    public void accept(Throwable e) throws Exception {
+                        //反正要重试，什么也不做了
+                        Log.e("chatactivity",e.getLocalizedMessage());
+                    }
+                }, new Action() { //onComplete()
+                    @Override
+                    public void run() throws Exception {
+
+                    }
+                }, new Consumer<Disposable>() { //onSubcribe()
+                    @Override
+                    public void accept(Disposable disposable) throws Exception {
+                        //保存下downloadDisposable以取消订阅
+                        downloadDisposable = disposable;
+                    }
+                });
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (uploadDisposable != null) {
+        if(uploadDisposable!=null) {
             uploadDisposable.dispose();
             uploadDisposable = null;
         }
-        if (downloadDisposable != null) {
+
+        if(downloadDisposable!=null) {
             downloadDisposable.dispose();
             downloadDisposable = null;
         }
-
     }
 
     @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+    public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == android.R.id.home) {
+            //当点击动作栏上的返回图标时执行
+            //关闭自己，返回来时的页面
             finish();
         }
         return super.onOptionsItemSelected(item);
     }
 
-    class chatMessagesAdapter extends RecyclerView.Adapter<chatMessagesAdapter.MyViewHolder> {
+    //为RecyclerView提供数据的适配器
+    public class ChatMessagesAdapter extends
+            RecyclerView.Adapter<ChatMessagesAdapter.MyViewHolder> {
 
-        @NonNull
         @Override
-        public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            //参数viewType即行的Layout资源Id，由getItemViewType()的返回值决定的
             View itemView = getLayoutInflater().inflate(viewType, parent, false);
             return new MyViewHolder(itemView);
         }
 
         @Override
-        public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
+        public void onBindViewHolder(MyViewHolder holder, int position) {
             Message message = chatMessages.get(position);
-            holder.textView.setText(message.content);
+            holder.textView.setText(message.getContent());
         }
 
         @Override
@@ -268,12 +235,15 @@ public class ChatActivity extends AppCompatActivity {
             return chatMessages.size();
         }
 
+        //有两种行layout，所以Override此方法
         @Override
         public int getItemViewType(int position) {
             Message message = chatMessages.get(position);
             if (message.getContactName().equals(MainActivity.myInfo.getName())) {
+                //如果是我的，靠右显示
                 return R.layout.chat_message_right_item;
             } else {
+                //对方的，靠左显示
                 return R.layout.chat_message_left_item;
             }
         }
@@ -282,7 +252,7 @@ public class ChatActivity extends AppCompatActivity {
             private TextView textView;
             private ImageView imageView;
 
-            public MyViewHolder(@NonNull View itemView) {
+            public MyViewHolder(View itemView) {
                 super(itemView);
                 textView = itemView.findViewById(R.id.textView);
                 imageView = itemView.findViewById(R.id.imageView);

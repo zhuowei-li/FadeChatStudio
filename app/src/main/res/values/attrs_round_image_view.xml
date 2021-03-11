@@ -1,0 +1,7 @@
+<resources>
+    <declare-styleable name="RoundImageView">
+        <attr name="borderWidth" format="dimension" />
+        <attr name="borderColor" format="color" />
+        <attr name="drawable" format="color|reference" />
+    </declare-styleable>
+</resources>
