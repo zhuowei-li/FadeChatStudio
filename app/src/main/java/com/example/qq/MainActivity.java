@@ -20,8 +20,7 @@ public class MainActivity extends AppCompatActivity implements FragmentListener 
 
     public static String serverHostURL = "";
 
-    //保存我自己的信息
-    public static ContactsPageListAdapter.ContactInfo myInfo;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

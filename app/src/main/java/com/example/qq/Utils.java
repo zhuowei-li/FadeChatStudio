@@ -2,12 +2,15 @@ package com.example.qq;
 
 import android.content.Context;
 
+import com.example.qq.adapter.ContactsPageListAdapter;
+
 /**
  * Created by nk on 12/6/2017.
  */
 
 public class Utils {
-    public static String ownName;
+    //保存我自己的信息
+    public static ContactsPageListAdapter.ContactInfo myInfo;
 
     //根据手机的分辨率从 dp 的单位 转成为 px(像素)
     public static int dip2px(Context context, float dpValue) {

@@ -362,7 +362,7 @@ public class MainFragment extends Fragment {
                         //但注意，需先清空现有好友
                         tree.clearDescendant(groupNode2);
                         for (ContactsPageListAdapter.ContactInfo info : contactInfos) {
-                            if (!info.getName().equals(Utils.ownName)) {
+                            if (!info.getName().equals(Utils.myInfo.getName())) {
                                 ListTree.TreeNode node2 = tree.addNode(groupNode2, info, R.layout.contacts_contact_item);
                                 //没有子节点了，不显示展开、收起图标
                                 node2.setShowExpandIcon(false);
@@ -406,7 +406,7 @@ public class MainFragment extends Fragment {
 
         //创建组们，组是树的根节点，它们的父节点为null
         ContactsPageListAdapter.GroupInfo group1 = new ContactsPageListAdapter.GroupInfo("特别关心", 0);
-        ContactsPageListAdapter.GroupInfo group2 = new ContactsPageListAdapter.GroupInfo("我的好友", 1);
+        ContactsPageListAdapter.GroupInfo group2 = new ContactsPageListAdapter.GroupInfo("我的好友", 0);
         ContactsPageListAdapter.GroupInfo group3 = new ContactsPageListAdapter.GroupInfo("朋友", 0);
         ContactsPageListAdapter.GroupInfo group4 = new ContactsPageListAdapter.GroupInfo("家人", 0);
         ContactsPageListAdapter.GroupInfo group5 = new ContactsPageListAdapter.GroupInfo("同学", 0);
@@ -416,7 +416,7 @@ public class MainFragment extends Fragment {
         groupNode3 = tree.addNode(null, group3, R.layout.contacts_group_item);
         groupNode4 = tree.addNode(null, group4, R.layout.contacts_group_item);
         groupNode5 = tree.addNode(null, group5, R.layout.contacts_group_item);
-
+        Log.d("fzj", "tree add");
         //获取页面里的RecyclerView，为它创建Adapter
         RecyclerView recyclerView = v.findViewById(R.id.contactListView);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -444,8 +444,15 @@ public class MainFragment extends Fragment {
     }
 
     @Override
-    public void onDetach() {
-        super.onDetach();
+    public void onDestroyView() {
+        Log.d("fzj", "onDestroyView");
+        super.onDestroyView();
+        tree.removeNode(groupNode1);
+        tree.removeNode(groupNode2);
+        tree.removeNode(groupNode3);
+        tree.removeNode(groupNode4);
+        tree.removeNode(groupNode5);
+        contactsAdapter = null;
         fragmentListener = null;
     }
 

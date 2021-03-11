@@ -108,7 +108,6 @@ public class LoginFragment extends Fragment {
             //切换页面之前要先判断是否登录成功
             //取出用户名，向服务端发出登录请求。
             String username = editTextQQNum.getText().toString();
-            Utils.ownName = username;
             //Retrofit跟据接口实现类并创建实例，这使用了动态代理技术，
             ChatService service = fragmentListener.getRetrofit().create(ChatService.class);
             Observable<ServerResult<ContactsPageListAdapter.ContactInfo>> observable =
@@ -135,8 +134,7 @@ public class LoginFragment extends Fragment {
                         @Override
                         public void onNext(ContactsPageListAdapter.ContactInfo contactInfo) {
                             //保存下我的信息
-                            MainActivity.myInfo=contactInfo;
-
+                            Utils.myInfo=contactInfo;
                             //无错误时执行,登录成功，进入主页面
                             FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
                             FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
@@ -219,8 +217,8 @@ public class LoginFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        if(MainActivity.myInfo!=null) {
-            editTextQQNum.setText(MainActivity.myInfo.getName());
+        if(Utils.myInfo!=null) {
+            editTextQQNum.setText(Utils.myInfo.getName());
         }
     }
 }

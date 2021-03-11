@@ -145,7 +145,7 @@ public class RegisterActivity extends AppCompatActivity {
                         @Override
                         public void onNext(ContactsPageListAdapter.ContactInfo contactInfo) {
                             //保存下我的信息
-                            MainActivity.myInfo = contactInfo;
+                            Utils.myInfo = contactInfo;
 
                             //提示用户注册成功
                             Snackbar.make(v1, "注册成功！", Snackbar.LENGTH_LONG)

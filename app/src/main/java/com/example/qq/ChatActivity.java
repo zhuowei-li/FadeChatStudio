@@ -75,7 +75,7 @@ public class ChatActivity extends AppCompatActivity {
                 String msg = editText.getText().toString();
                 editText.setText("");
                 //创建消息对象，准备上传
-                Message chatMessage = new Message(MainActivity.myInfo.getName(),
+                Message chatMessage = new Message(Utils.myInfo.getName(),
                         new Date().getTime(), msg);
 
                 //上传到服务端
@@ -239,7 +239,7 @@ public class ChatActivity extends AppCompatActivity {
         @Override
         public int getItemViewType(int position) {
             Message message = chatMessages.get(position);
-            if (message.getContactName().equals(MainActivity.myInfo.getName())) {
+            if (message.getContactName().equals(Utils.myInfo.getName())) {
                 //如果是我的，靠右显示
                 return R.layout.chat_message_right_item;
             } else {
