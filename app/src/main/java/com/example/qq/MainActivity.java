@@ -78,7 +78,7 @@ public class MainActivity extends AppCompatActivity implements FragmentListener 
     public void showServerAddressSetDlg(){
         //弹出输入对话框，让用户设置server地址
         EditText editText = new EditText(this);
-        editText.setText("http://10.0.2.2:8080");
+        editText.setText("http://172.20.10.5:8080");
         AlertDialog.Builder inputDialog = new AlertDialog.Builder(this);
         inputDialog.setTitle("请输入服务器地址").setView(editText);
         inputDialog.setPositiveButton("确定",

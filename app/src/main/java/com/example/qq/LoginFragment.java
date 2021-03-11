@@ -1,5 +1,6 @@
 package com.example.qq;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -47,6 +48,7 @@ public class LoginFragment extends Fragment {
         // Required empty public constructor
     }
 
+    @SuppressLint("CheckResult")
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -106,6 +108,7 @@ public class LoginFragment extends Fragment {
             //切换页面之前要先判断是否登录成功
             //取出用户名，向服务端发出登录请求。
             String username = editTextQQNum.getText().toString();
+            Utils.ownName = username;
             //Retrofit跟据接口实现类并创建实例，这使用了动态代理技术，
             ChatService service = fragmentListener.getRetrofit().create(ChatService.class);
             Observable<ServerResult<ContactsPageListAdapter.ContactInfo>> observable =

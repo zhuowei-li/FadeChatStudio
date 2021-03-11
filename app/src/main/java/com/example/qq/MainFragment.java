@@ -362,9 +362,11 @@ public class MainFragment extends Fragment {
                         //但注意，需先清空现有好友
                         tree.clearDescendant(groupNode2);
                         for (ContactsPageListAdapter.ContactInfo info : contactInfos) {
-                            ListTree.TreeNode node2 = tree.addNode(groupNode2, info, R.layout.contacts_contact_item);
-                            //没有子节点了，不显示展开、收起图标
-                            node2.setShowExpandIcon(false);
+                            if (!info.getName().equals(Utils.ownName)) {
+                                ListTree.TreeNode node2 = tree.addNode(groupNode2, info, R.layout.contacts_contact_item);
+                                //没有子节点了，不显示展开、收起图标
+                                node2.setShowExpandIcon(false);
+                            }
                         }
                         //通知RecyclerView更新数据
                         contactsAdapter.notifyDataSetChanged();

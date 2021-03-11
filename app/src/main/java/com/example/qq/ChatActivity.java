@@ -73,7 +73,7 @@ public class ChatActivity extends AppCompatActivity {
                 //从EditText控件取得消息
                 EditText editText = findViewById(R.id.editMessage);
                 String msg = editText.getText().toString();
-
+                editText.setText("");
                 //创建消息对象，准备上传
                 Message chatMessage = new Message(MainActivity.myInfo.getName(),
                         new Date().getTime(), msg);
