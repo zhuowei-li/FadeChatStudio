@@ -1,31 +1,33 @@
 package com.example.qq;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.SearchView;
 import android.widget.TextView;
 
-import com.niuedu.ListTree;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.niuedu.ListTree;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import com.example.qq.adapter.ContactsPageListAdapter;
 
 public class SearchActivity extends AppCompatActivity {
     //存放当前的搜索结果
-    private List<MyContactInfo> searchResultList=new ArrayList<>();
+    private final List<MyContactInfo> searchResultList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search);
-
         //设置搜索
         initSearching();
     }
@@ -41,7 +43,7 @@ public class SearchActivity extends AppCompatActivity {
         //取消按钮
         TextView cancelView = findViewById(R.id.tvCancel);
         //搜索结果列表
-        final RecyclerView resultListView = findViewById(R.id.resultListView);
+        RecyclerView resultListView = findViewById(R.id.resultListView);
         resultListView.setLayoutManager(new LinearLayoutManager(this));
         resultListView.setAdapter(new ResultListAdapter());
 
@@ -91,7 +93,7 @@ public class SearchActivity extends AppCompatActivity {
                 }
 
                 //通知RecyclerView，刷新数据
-                resultListView.getAdapter().notifyDataSetChanged();
+                Objects.requireNonNull(resultListView.getAdapter()).notifyDataSetChanged();
                 return true;
             }
         });
@@ -114,12 +116,14 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     class ResultListAdapter extends RecyclerView.Adapter<ResultListAdapter.MyViewHolder>{
+        @NonNull
         @Override
-        public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View v= getLayoutInflater().inflate(R.layout.search_result_item,parent,false);
             return new MyViewHolder(v);
         }
 
+        @SuppressLint("SetTextI18n")
         @Override
         public void onBindViewHolder(MyViewHolder holder, int position) {
             //获取联系人信息，设置到对应的控件中
@@ -141,7 +145,6 @@ public class SearchActivity extends AppCompatActivity {
 
             public MyViewHolder(View itemView) {
                 super(itemView);
-
                 imageViewHead = itemView.findViewById(R.id.imageViewHead);
                 textViewName = itemView.findViewById(R.id.textViewName);
                 textViewDetail = itemView.findViewById(R.id.textViewDetail);

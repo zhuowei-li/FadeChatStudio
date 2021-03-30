@@ -9,15 +9,6 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.design.widget.Snackbar;
-import android.support.design.widget.TabLayout;
-import android.support.v4.app.Fragment;
-import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.ViewPager;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ImageSpan;
@@ -31,31 +22,35 @@ import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
+
+import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.tabs.TabLayout;
 import com.niuedu.ListTree;
-
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-
 import io.reactivex.Observable;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
-import com.example.qq.R;
-
 import com.example.qq.Service.ChatService;
 import com.example.qq.Service.FragmentListener;
 import com.example.qq.adapter.ContactsPageListAdapter;
 import com.example.qq.adapter.MessagePageListAdapter;
 
-/**
- * A simple {@link Fragment} subclass.
- */
 public class MainFragment extends Fragment {
     final static int TAB_MESSAGE = 0; //QQ消息
     final static int TAB_CONTACTS = 1;//QQ联系人
     final static int TAB_SPACE = 2;//QQ动态（空间）
-
+    private static final String TAG = "MainFragment";
     private TabLayout tabLayout;//引用TabLayout控件
     private ViewPager viewPager;
     private ViewGroup rootView;
@@ -82,9 +77,6 @@ public class MainFragment extends Fragment {
 
     //用一个数组保存三个View的实例
     private View listViews[] = {null, null, null};
-
-    public MainFragment() {
-    }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -113,23 +105,19 @@ public class MainFragment extends Fragment {
                 container, false);
 
         //获取刷新控件
-        final SwipeRefreshLayout refreshLayout = rootView.findViewById(R.id.refreshLayout);
+        SwipeRefreshLayout refreshLayout = rootView.findViewById(R.id.refreshLayout);
         //响应它发出的事件
-        refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                //执行刷新数据的代码写在这里，不过一般都是耗时的操作或访问网络，所以需要
-                //开启另外的线程。
-
-                //刷新完成，隐藏UFO
-                refreshLayout.setRefreshing(false);
-            }
+        refreshLayout.setOnRefreshListener(() -> {
+            //执行刷新数据的代码写在这里，不过一般都是耗时的操作或访问网络，所以需要
+            //开启另外的线程。
+            //刷新完成，隐藏UFO
+            refreshLayout.setRefreshing(false);
         });
 
         //创建三个RecyclerView，分别对应QQ消息页，QQ联系人页，QQ空间页
-        RecyclerView v1 = new RecyclerView(getContext());
+        RecyclerView v1 = new RecyclerView(Objects.requireNonNull(getContext()));
         View v2 = createContactsPage();
-        RecyclerView v3 = new RecyclerView(getContext());
+        RecyclerView v3 = new RecyclerView(Objects.requireNonNull(getContext()));
 
         //将这三个View设置到数组中
         listViews[0] = v1;
@@ -416,7 +404,6 @@ public class MainFragment extends Fragment {
         groupNode3 = tree.addNode(null, group3, R.layout.contacts_group_item);
         groupNode4 = tree.addNode(null, group4, R.layout.contacts_group_item);
         groupNode5 = tree.addNode(null, group5, R.layout.contacts_group_item);
-        Log.d("fzj", "tree add");
         //获取页面里的RecyclerView，为它创建Adapter
         RecyclerView recyclerView = v.findViewById(R.id.contactListView);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -445,7 +432,6 @@ public class MainFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
-        Log.d("fzj", "onDestroyView");
         super.onDestroyView();
         tree.removeNode(groupNode1);
         tree.removeNode(groupNode2);

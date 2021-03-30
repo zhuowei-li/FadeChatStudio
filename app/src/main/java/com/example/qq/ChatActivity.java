@@ -1,11 +1,7 @@
 package com.example.qq;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -13,12 +9,15 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
-
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
@@ -26,6 +25,7 @@ import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import com.example.qq.Service.ChatService;
+import com.google.android.material.snackbar.Snackbar;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -41,6 +41,7 @@ public class ChatActivity extends AppCompatActivity {
     private Disposable uploadDisposable;//用于上传时取消请求
     private Disposable downloadDisposable;//用于下载时取消请求
 
+    @SuppressLint("CheckResult")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,7 +59,7 @@ public class ChatActivity extends AppCompatActivity {
 
         setSupportActionBar(toolbar);
         //设置显示动作栏上的返回图标
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
 
         //获取Recycler控件并设置适配器
         final RecyclerView recyclerView = findViewById(R.id.chatMessageListView);
@@ -67,6 +68,7 @@ public class ChatActivity extends AppCompatActivity {
 
         //响应按钮的点击，发出消息
         findViewById(R.id.buttonSend).setOnClickListener(new View.OnClickListener() {
+            @SuppressLint("CheckResult")
             @Override
             public void onClick(View view) {
                 //现在还不能真正发出消息，把消息放在chatMessages中，显示出来即可
@@ -120,7 +122,7 @@ public class ChatActivity extends AppCompatActivity {
                 //添加到集合中，从而能在RecyclerView中显示
                 chatMessages.add(chatMessage);
                 //在view中显示出来。通知RecyclerView，更新一行
-                recyclerView.getAdapter().notifyItemInserted(chatMessages.size() - 1);
+                Objects.requireNonNull(recyclerView.getAdapter()).notifyItemInserted(chatMessages.size() - 1);
                 //让RecyclerView向下滚动，以显示最新的消息
                 recyclerView.scrollToPosition(chatMessages.size() - 1);
             }

@@ -2,15 +2,14 @@ package com.example.qq;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.design.widget.Snackbar;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.widget.EditText;
-
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import com.example.qq.Service.FragmentListener;
-import com.example.qq.adapter.ContactsPageListAdapter;
+import com.google.android.material.snackbar.Snackbar;
+import java.util.Objects;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -66,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements FragmentListener 
                             .build();
                 }catch (Exception e){
                     Snackbar.make(findViewById(R.id.fragment_container),
-                            e.getLocalizedMessage(),Snackbar.LENGTH_LONG);
+                            Objects.requireNonNull(e.getLocalizedMessage()),Snackbar.LENGTH_LONG).show();
                     showServerAddressSetDlg();
                 }
             }
@@ -87,7 +86,7 @@ public class MainActivity extends AppCompatActivity implements FragmentListener 
                     SharedPreferences preferences= getApplicationContext().getSharedPreferences("qqapp", MODE_PRIVATE);
                     SharedPreferences.Editor edit = preferences.edit();
                     edit.putString("server_addr",serverHostURL);
-                    edit.commit();
+                    edit.apply();
                     //创建Retrofit对象
                     retrofit = new Retrofit.Builder()
                             .baseUrl(serverHostURL)

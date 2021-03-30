@@ -1,11 +1,12 @@
 package com.example.qq;
 
 import android.content.Context;
-import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 
-public class QQViewPager extends ViewPager{
+import androidx.viewpager.widget.ViewPager;
+
+public class QQViewPager extends ViewPager {
     //必须实现带一个参数的构造方法
     public QQViewPager(Context context) {
         super(context);

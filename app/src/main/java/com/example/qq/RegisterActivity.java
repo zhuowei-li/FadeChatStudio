@@ -1,6 +1,7 @@
 package com.example.qq;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -11,12 +12,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.support.design.widget.BottomSheetDialog;
-import android.support.design.widget.Snackbar;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.FileProvider;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -24,6 +19,10 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.FileProvider;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -32,7 +31,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
 import io.reactivex.Observable;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -40,6 +38,9 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 import com.example.qq.Service.ChatService;
 import com.example.qq.adapter.ContactsPageListAdapter;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.snackbar.Snackbar;
+
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
@@ -205,30 +206,28 @@ public class RegisterActivity extends AppCompatActivity {
             return MultipartBody.Part.createFormData("none", "none");
         }
 
-        InputStream inputStream = null;
-        byte[] data=null;
+        InputStream inputStream;
+        byte[] data;
         try {
             inputStream = getContentResolver().openInputStream(this.imageUri);
-            data=new byte[inputStream.available()];
+            data = new byte[inputStream.available()];
             inputStream.read(data);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            return null;
         } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
 
         RequestBody requestFile = RequestBody.create(MediaType.parse("application/otcet-stream"), data);
-        MultipartBody.Part body = MultipartBody.Part.createFormData("file", "png", requestFile);
-        return body;
+        return MultipartBody.Part.createFormData("file", "png", requestFile);
     }
 
 
     private void showTackPhotoView() {
         File imageOutputFile = generateOutPutFile(Environment.DIRECTORY_DCIM);
-        this.imageUri = FileProvider.getUriForFile(this,
-                "com.example.qq.fileprovider", imageOutputFile);
+        if (imageOutputFile != null) {
+            imageUri = FileProvider.getUriForFile(this,
+                    "com.example.qq.fileprovider", imageOutputFile);
+        }
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE); //照相
         intent.putExtra(MediaStore.EXTRA_OUTPUT, this.imageUri); //指定图片输出地址
         startActivityForResult(intent, TAKE_PHOTO); //启动照相
@@ -238,6 +237,7 @@ public class RegisterActivity extends AppCompatActivity {
 
     private File generateOutPutFile(String pathInExternalStorage){
         //图片名称 时间命名
+        @SuppressLint("SimpleDateFormat")
         SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmss");
         Date date = new Date(System.currentTimeMillis());
         String photoFileName = format.format(date)+".png";
@@ -272,7 +272,7 @@ public class RegisterActivity extends AppCompatActivity {
                     SharedPreferences preferences= getApplicationContext().getSharedPreferences("qqapp", MODE_PRIVATE);
                     SharedPreferences.Editor edit = preferences.edit();
                     edit.putString("server_addr",serverHostURL);
-                    edit.commit();
+                    edit.apply();
                     //创建Retrofit对象
                     retrofit = new Retrofit.Builder()
                             .baseUrl(serverHostURL)
@@ -338,20 +338,18 @@ public class RegisterActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        switch (requestCode) {
-            case ASK_PERMISSIONS:
-                int i=0;
-                for (; i<permissions.length; i++) {
-                    if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                        Toast.makeText(this,
-                                "权限申请被拒绝，无法完成照片选择。",
-                                Toast.LENGTH_SHORT).show();
-                        break;
-                    }
+        if (requestCode == ASK_PERMISSIONS) {
+            int i = 0;
+            for (; i < permissions.length; i++) {
+                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this,
+                            "权限申请被拒绝，无法完成照片选择。",
+                            Toast.LENGTH_SHORT).show();
+                    break;
                 }
-                break;
-            default:
-                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+            }
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 

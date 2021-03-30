@@ -1,8 +1,9 @@
 package com.example.qq.adapter;
 
-import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 /**
  * Created by nkm on 2017/9/21.
